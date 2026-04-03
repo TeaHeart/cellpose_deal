@@ -1,0 +1,17 @@
+{
+  "configurations": [
+    {
+      "name": "Python Debugger: CLI",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}\\src\\main_cli.py"
+    },
+    {
+      "preLaunchTask": "build ui",
+      "name": "Python Debugger: GUI",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}\\src\\main_gui.py"
+    }
+  ]
+}

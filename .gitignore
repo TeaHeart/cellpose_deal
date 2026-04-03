@@ -206,5 +206,9 @@ marimo/_static/
 marimo/_lsp/
 __marimo__/
 
-.vscode
+.vscode/*
+!.vscode/tasks.json
+!.vscode/launch.json
+*_ui.py
+*_rc.py
 output
