@@ -212,3 +212,5 @@ __marimo__/
 *_ui.py
 *_rc.py
 output
+test_data/**/*.npy
+test_data/**/*.csv

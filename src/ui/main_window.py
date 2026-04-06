@@ -3,6 +3,7 @@ import warnings
 from PySide6.QtWidgets import QFileDialog, QMainWindow
 from PySide6.QtCore import QModelIndex, Slot
 from PySide6.QtGui import QImage, QPixmap
+from cellpose import io
 import cv2
 import numpy as np
 import pandas as pd
@@ -212,9 +213,22 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         px_size = 18.5
 
         # 执行分割
-        print("执行分割...")
-        image, masks, flows, styles = self.model.eval(file_path)
-        print("分割完成...")
+        basename = os.path.splitext(file_path)[0]
+        npy_file = f"{basename}_seg.npy"
+        if os.path.isfile(npy_file):
+            print("使用缓存")
+            image = io.imread(file_path)
+
+            npy: np.ndarray = np.load(npy_file, allow_pickle=True)
+            d: dict = npy.item()
+
+            masks = d["masks"]
+            flows = d["flows"]
+        else:
+            print("执行分割...")
+            image, masks, flows, styles = self.model.eval(file_path)
+            print("分割完成...")
+            io.masks_flows_to_seg(image, masks, flows, file_path)
 
         self.current_image = image
         self.current_masks = masks
@@ -222,6 +236,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         # 计算DataFrame
         df = masks_to_dataframe(masks, px_size)
         self.current_df = df
+        df.to_csv(f"{basename}.csv", mode="w+", encoding="utf-8-sig")
+
         # 显示DataFrame到tableView
         self.table_viewer.updateData(df)
 
