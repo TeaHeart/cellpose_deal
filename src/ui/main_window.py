@@ -3,12 +3,12 @@ import warnings
 from PySide6.QtWidgets import QFileDialog, QGraphicsScene, QMainWindow
 from PySide6.QtCore import QAbstractTableModel, QEvent, QModelIndex, Qt, Slot
 from PySide6.QtGui import QColor, QImage, QPixmap, QWheelEvent
-from cellpose import models, io
 import cv2
 import numpy as np
 import pandas as pd
 from skimage.measure import regionprops_table
 from ui.file_tree_viewer import FileTreeViewer
+from ui.inference_model import InferenceModel
 from ui.main_window_ui import Ui_MainWindow
 
 warnings.filterwarnings("ignore", message="Sparse invariant checks")
@@ -239,8 +239,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             self.on_table_selection_changed
         )
 
-        print("加载模型...")
-        self.model = models.CellposeModel(gpu=True)
+        self.model = InferenceModel()
 
     def setWindowTitle(self, title: str):
         super().setWindowTitle(f"Cellpose Deal - {title}")
@@ -289,19 +288,13 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
     def handler_file(self, file_path: str):
         px_size = 18.5
-        diam = 100
-        niter = None
-
-        # 读取图像
-        self.current_image = io.imread(file_path)
 
         # 执行分割
-        masks, flows, styles = self.model.eval(
-            x=self.current_image,
-            diameter=diam,
-            niter=niter,
-        )
+        print("执行分割...")
+        image, masks, flows, styles = self.model.eval(file_path)
+        print("分割完成...")
 
+        self.current_image = image
         self.current_masks = masks
 
         # 计算DataFrame
