@@ -1,13 +1,14 @@
 import os
 import warnings
-from PySide6.QtWidgets import QFileDialog, QGraphicsScene, QMainWindow
-from PySide6.QtCore import QAbstractTableModel, QEvent, QModelIndex, Qt, Slot
-from PySide6.QtGui import QColor, QImage, QPixmap, QWheelEvent
+from PySide6.QtWidgets import QFileDialog, QMainWindow
+from PySide6.QtCore import QAbstractTableModel, QModelIndex, Qt, Slot
+from PySide6.QtGui import QColor, QImage, QPixmap
 import cv2
 import numpy as np
 import pandas as pd
 from skimage.measure import regionprops_table
 from ui.file_tree_viewer import FileTreeViewer
+from ui.image_viewer import ImageViewer
 from ui.inference_model import InferenceModel
 from ui.main_window_ui import Ui_MainWindow
 
@@ -227,9 +228,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.file_tree_viewer = FileTreeViewer(self, self.treeView)
         self.file_tree_viewer.currentChanged.connect(self.treeView_currentChanged)
 
-        self.graphicsScene = QGraphicsScene(self)
-        self.graphicsView.setScene(self.graphicsScene)
-        self.graphicsView.installEventFilter(self)
+        self.image_viewer = ImageViewer(self, self.graphicsView)
 
         self.table_model: PandasTableModel = None
         self.current_image: np.ndarray = None  # 存储原始图像
@@ -271,20 +270,6 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                         self.image_viewer.set_pixmap(pixmap)
 
                         self.handler_file(file_path)
-
-    def eventFilter(self, obj, event: QEvent):
-        print(obj, event)
-        if obj == self.graphicsView:
-            if isinstance(event, QWheelEvent):
-                # 缩放
-                zoom_factor = 1.25
-                if event.angleDelta().y() > 0:
-                    self.graphicsView.scale(zoom_factor, zoom_factor)
-                else:
-                    self.graphicsView.scale(1 / zoom_factor, 1 / zoom_factor)
-                return True
-
-        return super().eventFilter(obj, event)
 
     def handler_file(self, file_path: str):
         px_size = 18.5
@@ -349,13 +334,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         # 转换为QPixmap并显示
         pixmap = numpy_to_qpixmap(overlay_image)
 
-        if not pixmap.isNull():
-            self.graphicsScene.clear()
-            self.graphicsScene.addPixmap(pixmap)
-            self.graphicsScene.setSceneRect(pixmap.rect())
-            self.graphicsView.fitInView(
-                self.graphicsScene.sceneRect(), Qt.AspectRatioMode.KeepAspectRatio
-            )
+        self.image_viewer.set_pixmap(pixmap)
 
     def on_table_selection_changed(self, selected, deselected):
         """
@@ -398,10 +377,4 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
         # 更新显示
         pixmap = numpy_to_qpixmap(highlighted_image)
-        if not pixmap.isNull():
-            self.graphicsScene.clear()
-            self.graphicsScene.addPixmap(pixmap)
-            self.graphicsScene.setSceneRect(pixmap.rect())
-            self.graphicsView.fitInView(
-                self.graphicsScene.sceneRect(), Qt.AspectRatioMode.KeepAspectRatio
-            )
+        self.image_viewer.set_pixmap(pixmap)
