@@ -1,6 +1,6 @@
 import os
 import warnings
-from PySide6.QtWidgets import QFileDialog, QGraphicsScene, QMainWindow, QFileSystemModel
+from PySide6.QtWidgets import QFileDialog, QGraphicsScene, QMainWindow
 from PySide6.QtCore import QAbstractTableModel, QEvent, QModelIndex, Qt, Slot
 from PySide6.QtGui import QColor, QImage, QPixmap, QWheelEvent
 from cellpose import models, io
@@ -8,6 +8,7 @@ import cv2
 import numpy as np
 import pandas as pd
 from skimage.measure import regionprops_table
+from ui.file_tree_viewer import FileTreeViewer
 from ui.main_window_ui import Ui_MainWindow
 
 warnings.filterwarnings("ignore", message="Sparse invariant checks")
@@ -223,18 +224,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
         self.setWindowTitle("Welcome")
 
-        self.treeView_model = QFileSystemModel()
-        self.treeView_model.directoryLoaded.connect(self.treeView_directoryLoaded)
-        self.treeView.setModel(self.treeView_model)
-
-        # 隐藏类型和时间列
-        self.treeView.hideColumn(2)
-        self.treeView.hideColumn(3)
-
-        self.treeView_selectionModel = self.treeView.selectionModel()
-        self.treeView_selectionModel.currentChanged.connect(
-            self.treeView_currentChanged
-        )
+        self.file_tree_viewer = FileTreeViewer(self, self.treeView)
+        self.file_tree_viewer.currentChanged.connect(self.treeView_currentChanged)
 
         self.graphicsScene = QGraphicsScene(self)
         self.graphicsView.setScene(self.graphicsScene)
@@ -259,49 +250,26 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         folder_path = QFileDialog.getExistingDirectory(self, "打开文件夹")
 
         if folder_path:
-            root_index = self.treeView_model.setRootPath(folder_path)
-            self.treeView.setRootIndex(root_index)
+            self.file_tree_viewer.setRootPath(folder_path)
 
             self.setWindowTitle(folder_path)
-
-    @Slot(QModelIndex)
-    def on_treeView_clicked(self, clicked: QModelIndex):
-        # 单击展开/关闭
-        if clicked.isValid():
-            isExpanded = self.treeView.isExpanded(clicked)
-            self.treeView.setExpanded(clicked, not isExpanded)
-
-    @Slot(str)
-    def treeView_directoryLoaded(self, path: str):
-        self.treeView.expandToDepth(1)
-        self.treeView.resizeColumnToContents(0)
 
     @Slot(QModelIndex, QModelIndex)
     def treeView_currentChanged(self, current: QModelIndex, previous: QModelIndex):
         if previous.isValid():
-            file_path = self.treeView_model.filePath(previous)
+            file_path = self.file_tree_viewer.filePath(previous)
             if os.path.isfile(file_path):
                 if file_path.lower().endswith(IMAGE_EXTENSIONS):
                     print("previous", file_path)
 
         if current.isValid():
-            file_path = self.treeView_model.filePath(current)
+            file_path = self.file_tree_viewer.filePath(current)
             if os.path.isfile(file_path):
                 if file_path.lower().endswith(IMAGE_EXTENSIONS):
                     print("current", file_path)
                     pixmap = QPixmap(file_path)
                     if not pixmap.isNull():
-                        # 清除之前的图片
-                        self.graphicsScene.clear()
-                        # 添加新图片
-                        self.graphicsScene.addPixmap(pixmap)
-                        # 设置场景矩形为图片大小
-                        self.graphicsScene.setSceneRect(pixmap.rect())
-                        # 自动适配视图
-                        self.graphicsView.fitInView(
-                            self.graphicsScene.sceneRect(),
-                            Qt.AspectRatioMode.KeepAspectRatio,
-                        )
+                        self.image_viewer.set_pixmap(pixmap)
 
                         self.handler_file(file_path)
 
