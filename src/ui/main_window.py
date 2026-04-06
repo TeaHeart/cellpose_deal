@@ -1,8 +1,8 @@
 import os
 import warnings
 from PySide6.QtWidgets import QFileDialog, QMainWindow
-from PySide6.QtCore import QAbstractTableModel, QModelIndex, Qt, Slot
-from PySide6.QtGui import QColor, QImage, QPixmap
+from PySide6.QtCore import QModelIndex, Slot
+from PySide6.QtGui import QImage, QPixmap
 import cv2
 import numpy as np
 import pandas as pd
@@ -11,6 +11,7 @@ from ui.file_tree_viewer import FileTreeViewer
 from ui.image_viewer import ImageViewer
 from ui.inference_model import InferenceModel
 from ui.main_window_ui import Ui_MainWindow
+from ui.table_viewer import TableViewer
 
 warnings.filterwarnings("ignore", message="Sparse invariant checks")
 
@@ -154,70 +155,6 @@ def masks_to_dataframe(masks: np.ndarray, px_size: float):
     return df
 
 
-class PandasTableModel(QAbstractTableModel):
-    """
-    将Pandas DataFrame适配到QTableView的模型
-    """
-
-    def __init__(self, data: pd.DataFrame):
-        super().__init__()
-        self._data = data
-
-    def rowCount(self, parent=QModelIndex()):
-        return len(self._data)
-
-    def columnCount(self, parent=QModelIndex()):
-        return len(self._data.columns)
-
-    def data(self, index: QModelIndex, role=Qt.ItemDataRole.DisplayRole):
-        if not index.isValid():
-            return None
-
-        value = self._data.iloc[index.row(), index.column()]
-
-        if role == Qt.ItemDataRole.DisplayRole:
-            # 格式化数值显示
-            if isinstance(value, float):
-                return f"{value:.3f}"
-            return str(value)
-
-        elif role == Qt.ItemDataRole.TextAlignmentRole:
-            # 数值类型右对齐
-            if isinstance(value, (int, float)):
-                return Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter
-            return Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter
-
-        elif role == Qt.ItemDataRole.BackgroundRole:
-            # 可选：根据数值设置背景色
-            if isinstance(value, float):
-                if value < 0.5:
-                    return QColor(255, 200, 200)  # 浅红色
-            return None
-
-        return None
-
-    def headerData(
-        self,
-        section: int,
-        orientation: Qt.Orientation,
-        role=Qt.ItemDataRole.DisplayRole,
-    ):
-        if role == Qt.ItemDataRole.DisplayRole:
-            if orientation == Qt.Orientation.Horizontal:
-                return str(self._data.columns[section])
-            else:
-                return str(self._data.index[section])
-        return None
-
-    def updateData(self, new_data: pd.DataFrame):
-        """
-        更新数据
-        """
-        self.beginResetModel()
-        self._data = new_data
-        self.endResetModel()
-
-
 class MainWindow(QMainWindow, Ui_MainWindow):
     def __init__(self):
         super().__init__()
@@ -230,13 +167,13 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
         self.image_viewer = ImageViewer(self, self.graphicsView)
 
-        self.table_model: PandasTableModel = None
+        self.table_viewer = TableViewer(self, self.tableView)
+
         self.current_image: np.ndarray = None  # 存储原始图像
         self.current_masks: np.ndarray = None  # 存储当前masks
+        self.current_df: pd.DataFrame = None  # 存储当前df
 
-        self.tableView.selectionModel().selectionChanged.connect(
-            self.on_table_selection_changed
-        )
+        self.table_viewer.currentChanged.connect(self.tableView_currentChanged)
 
         self.model = InferenceModel()
 
@@ -284,9 +221,9 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
         # 计算DataFrame
         df = masks_to_dataframe(masks, px_size)
-
+        self.current_df = df
         # 显示DataFrame到tableView
-        self.display_dataframe_to_tableview(df)
+        self.table_viewer.updateData(df)
 
         # 显示带mask的图像
         self.display_image_with_masks(self.current_image, masks)
@@ -296,23 +233,6 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         if len(df) > 0:
             print(f"平均直径: {df['直径'].mean():.2f} μm")
             print(f"平均圆度: {df['圆度'].mean():.3f}")
-
-    def display_dataframe_to_tableview(self, df: pd.DataFrame):
-        """
-        将DataFrame显示到QTableView
-        """
-        if self.table_model is None:
-            self.table_model = PandasTableModel(df)
-            self.tableView.setModel(self.table_model)
-        else:
-            self.table_model.updateData(df)
-
-        # 设置列宽自适应内容
-        self.tableView.resizeColumnsToContents()
-
-        # 设置选择模式
-        self.tableView.setSelectionBehavior(self.tableView.SelectionBehavior.SelectRows)
-        self.tableView.setSelectionMode(self.tableView.SelectionMode.SingleSelection)
 
     def display_image_with_masks(
         self, image: np.ndarray, masks: np.ndarray, mode="outline", alpha=0.5
@@ -336,21 +256,13 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
         self.image_viewer.set_pixmap(pixmap)
 
-    def on_table_selection_changed(self, selected, deselected):
-        """
-        当在表格中选择颗粒时，高亮显示对应的mask
-        """
-        if not self.current_masks is not None:
-            return
-
-        indexes = selected.indexes()
-        if indexes:
-            row = indexes[0].row()
-            # 获取颗粒ID（假设第一列是ID）
-            particle_id = self.table_model._data.iloc[row, 0]
-
-            # 高亮显示选中的颗粒
-            self.highlight_particle(particle_id)
+    @Slot(QModelIndex, QModelIndex)
+    def tableView_currentChanged(self, current: QModelIndex, previous: QModelIndex):
+        if self.current_masks is not None and self.current_df is not None:
+            if current.isValid():
+                row = current.row()
+                particle_id = self.current_df.iloc[row, 0]
+                self.highlight_particle(particle_id)
 
     def highlight_particle(self, particle_id: int):
         """
