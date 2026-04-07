@@ -27,13 +27,72 @@
       <property name="childrenCollapsible">
        <bool>false</bool>
       </property>
-      <widget class="QTreeView" name="treeView">
+      <widget class="QSplitter" name="splitter_3">
        <property name="minimumSize">
         <size>
          <width>300</width>
          <height>0</height>
         </size>
        </property>
+       <property name="orientation">
+        <enum>Qt::Orientation::Vertical</enum>
+       </property>
+       <property name="childrenCollapsible">
+        <bool>false</bool>
+       </property>
+       <widget class="QTreeView" name="treeView"/>
+       <widget class="QWidget" name="formLayoutWidget">
+        <property name="minimumSize">
+         <size>
+          <width>0</width>
+          <height>300</height>
+         </size>
+        </property>
+        <layout class="QFormLayout" name="formLayout">
+         <item row="0" column="0">
+          <widget class="QLabel" name="label">
+           <property name="text">
+            <string>像素标尺 (px/μm)</string>
+           </property>
+          </widget>
+         </item>
+         <item row="1" column="0">
+          <widget class="QLabel" name="label_2">
+           <property name="text">
+            <string>颗粒预估直径 (px)</string>
+           </property>
+          </widget>
+         </item>
+         <item row="2" column="0">
+          <widget class="QLabel" name="label_3">
+           <property name="text">
+            <string>迭代次数</string>
+           </property>
+          </widget>
+         </item>
+         <item row="0" column="1">
+          <widget class="QDoubleSpinBox" name="doubleSpinBox_px_size">
+           <property name="maximum">
+            <double>10000.000000000000000</double>
+           </property>
+          </widget>
+         </item>
+         <item row="1" column="1">
+          <widget class="QDoubleSpinBox" name="doubleSpinBox_diam">
+           <property name="maximum">
+            <double>10000.000000000000000</double>
+           </property>
+          </widget>
+         </item>
+         <item row="2" column="1">
+          <widget class="QSpinBox" name="spinBox_niter">
+           <property name="maximum">
+            <number>10000</number>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </widget>
       </widget>
       <widget class="QSplitter" name="splitter_2">
        <property name="sizePolicy">
@@ -63,12 +122,6 @@
         </property>
        </widget>
        <widget class="QTableView" name="tableView">
-        <property name="sizePolicy">
-         <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
-          <horstretch>0</horstretch>
-          <verstretch>0</verstretch>
-         </sizepolicy>
-        </property>
         <property name="minimumSize">
          <size>
           <width>0</width>
@@ -109,7 +162,6 @@
     <property name="title">
      <string>模型</string>
     </property>
-    <addaction name="actionModelConfig"/>
     <addaction name="actionEvalCurrent"/>
     <addaction name="actionEvalAll"/>
     <addaction name="actionLoadMask"/>
@@ -121,11 +173,6 @@
   <action name="actionOpenFolder">
    <property name="text">
     <string>打开文件夹</string>
-   </property>
-  </action>
-  <action name="actionModelConfig">
-   <property name="text">
-    <string>模型配置</string>
    </property>
   </action>
   <action name="actionEvalCurrent">

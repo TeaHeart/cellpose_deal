@@ -13,10 +13,14 @@ from cellpose import io
 import numpy as np
 import pandas as pd
 import yaml
-from ui.config_dialog import ConfigDialog
 from ui.file_tree_viewer import FileTreeViewer
 from ui.image_viewer import ImageViewer
-from ui.inference_model import InferenceModel, InferenceResult, InferenceWorker
+from ui.inference_model import (
+    InferenceConfig,
+    InferenceModel,
+    InferenceResult,
+    InferenceWorker,
+)
 from ui.main_window_ui import Ui_MainWindow
 from ui.table_viewer import TableViewer
 
@@ -33,7 +37,6 @@ class MainWindow(QMainWindow):
         self.ui.setupUi(self)
 
         self.ui.actionOpenFolder.triggered.connect(self.actionOpenFolder_triggered)
-        self.ui.actionModelConfig.triggered.connect(self.actionModelConfig_triggered)
         self.ui.actionEvalCurrent.triggered.connect(self.actionEvalCurrent_triggered)
         self.ui.actionEvalAll.triggered.connect(self.actionEvalAll_triggered)
 
@@ -48,6 +51,7 @@ class MainWindow(QMainWindow):
         self.table_viewer.currentChanged.connect(self.tableView_currentChanged)
 
         self.model = InferenceModel()
+        self.config = self.model.config
 
     def setWindowTitle(self, title: str):
         super().setWindowTitle(f"Cellpose Deal - {title}")
@@ -61,12 +65,19 @@ class MainWindow(QMainWindow):
             self.ui.menu_2.setEnabled(True)
             self.setWindowTitle(folder_path)
 
-    @Slot()
-    def actionModelConfig_triggered(self):
-        dialog = ConfigDialog(self)
-        dialog.config = self.model.config
-        if dialog.exec():
-            self.model.config = dialog.config
+    @property
+    def config(self) -> InferenceConfig:
+        return {
+            "px_size": self.ui.doubleSpinBox_px_size.value(),
+            "diam": self.ui.doubleSpinBox_diam.value(),
+            "niter": self.ui.spinBox_niter.value(),
+        }
+
+    @config.setter
+    def config(self, value: InferenceConfig):
+        self.ui.doubleSpinBox_px_size.setValue(value["px_size"])
+        self.ui.doubleSpinBox_diam.setValue(value["diam"])
+        self.ui.spinBox_niter.setValue(value["niter"])
 
     @Slot()
     def actionEvalCurrent_triggered(self):
@@ -109,6 +120,7 @@ class MainWindow(QMainWindow):
         progress.setWindowModality(Qt.WindowModality.WindowModal)
         progress.setAutoClose(True)
 
+        self.model.config = self.config
         worker = InferenceWorker(self.model, files)
 
         @Slot(int, int, str)
@@ -173,7 +185,7 @@ class MainWindow(QMainWindow):
         # 配置
         if os.path.isfile(yaml_file):
             with open(yaml_file, "r", encoding="utf-8") as f:
-                self.model.config = yaml.safe_load(f)["cellpose"]
+                self.config = yaml.safe_load(f)["cellpose"]
 
         # 遮罩
         if self.ui.actionLoadMask.isChecked():
