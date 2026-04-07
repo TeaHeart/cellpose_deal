@@ -40,7 +40,7 @@ class MainWindow(QMainWindow):
         self.setWindowTitle("Welcome")
 
         self.file_tree_viewer = FileTreeViewer(self, self.ui.treeView)
-        self.file_tree_viewer.currentChanged.connect(self.treeView_currentChanged)
+        self.file_tree_viewer.clicked.connect(self.treeView_clicked)
 
         self.image_viewer = ImageViewer(self, self.ui.graphicsView)
 
@@ -82,13 +82,7 @@ class MainWindow(QMainWindow):
         self.eval_images(files)
 
     @Slot(QModelIndex, QModelIndex)
-    def treeView_currentChanged(self, current: QModelIndex, previous: QModelIndex):
-        if previous.isValid():
-            file_path = self.file_tree_viewer.filePath(previous)
-            if os.path.isfile(file_path):
-                if file_path.lower().endswith(IMAGE_EXTENSIONS):
-                    print("previous", file_path)
-
+    def treeView_clicked(self, current: QModelIndex):
         self.ui.actionEvalCurrent.setEnabled(False)
 
         if current.isValid():

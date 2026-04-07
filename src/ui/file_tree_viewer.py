@@ -4,7 +4,7 @@ from PySide6.QtCore import QDirIterator, QModelIndex, QObject, Signal, Slot
 
 
 class FileTreeViewer(QObject):
-    currentChanged = Signal(QModelIndex, QModelIndex)
+    clicked = Signal(QModelIndex)
 
     def __init__(self, parent: QObject, treeView: QTreeView):
         super().__init__(parent)
@@ -19,10 +19,10 @@ class FileTreeViewer(QObject):
         self._treeView.hideColumn(2)
         self._treeView.hideColumn(3)
         self._treeView.clicked.connect(self._treeView_clicked)
+        self._treeView.clicked.connect(self.clicked)
 
         # 文件选择
         self._treeViewSelectionModel = self._treeView.selectionModel()
-        self._treeViewSelectionModel.currentChanged.connect(self.currentChanged)
 
     @Slot(QModelIndex)
     def _treeView_clicked(self, clicked: QModelIndex):
