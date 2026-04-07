@@ -81,7 +81,7 @@ class MainWindow(QMainWindow):
         files = [file for file in files if file.lower().endswith(IMAGE_EXTENSIONS)]
         self.eval_images(files)
 
-    @Slot(QModelIndex, QModelIndex)
+    @Slot(QModelIndex)
     def treeView_clicked(self, current: QModelIndex):
         self.ui.actionEvalCurrent.setEnabled(False)
 
@@ -91,9 +91,9 @@ class MainWindow(QMainWindow):
                 if file_path.lower().endswith(IMAGE_EXTENSIONS):
                     print("current", file_path)
 
-                    self.ui.treeView.setEnabled(False)
+                    self.setEnabled(False)
                     self.load_files(file_path)
-                    self.ui.treeView.setEnabled(True)
+                    self.setEnabled(True)
 
                     self.ui.actionEvalCurrent.setEnabled(True)
 
@@ -176,12 +176,13 @@ class MainWindow(QMainWindow):
                 self.model.config = yaml.safe_load(f)["cellpose"]
 
         # 遮罩
-        if os.path.isfile(npy_file):
-            npy: np.ndarray = np.load(npy_file, allow_pickle=True)
-            masks: np.ndarray = npy.item()["masks"]
-            for label, contour in self.image_viewer.draw_contours(masks):
-                QApplication.processEvents()
-                self.contours[label] = contour
+        if self.ui.actionLoadMask.isChecked():
+            if os.path.isfile(npy_file):
+                npy: np.ndarray = np.load(npy_file, allow_pickle=True)
+                masks: np.ndarray = npy.item()["masks"]
+                for label, contour in self.image_viewer.draw_contours(masks):
+                    QApplication.processEvents()
+                    self.contours[label] = contour
 
         # 表格
         if os.path.isfile(csv_file):

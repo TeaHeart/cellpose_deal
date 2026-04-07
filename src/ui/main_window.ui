@@ -112,6 +112,7 @@
     <addaction name="actionModelConfig"/>
     <addaction name="actionEvalCurrent"/>
     <addaction name="actionEvalAll"/>
+    <addaction name="actionLoadMask"/>
    </widget>
    <addaction name="menu"/>
    <addaction name="menu_2"/>
@@ -138,6 +139,17 @@
   <action name="actionEvalAll">
    <property name="text">
     <string>推理全部</string>
+   </property>
+  </action>
+  <action name="actionLoadMask">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="checked">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>加载遮罩</string>
    </property>
   </action>
  </widget>
