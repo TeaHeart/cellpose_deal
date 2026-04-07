@@ -156,6 +156,11 @@ class MainWindow(QMainWindow):
             error_count = len(results) - success_count
             print(f"处理完成, 成功 {success_count} 个, 失败 {error_count} 个")
 
+            if success_count > 0:
+                for result in results:
+                    if result["success"]:
+                        self.load_files(result["file"])
+
         @Slot(str, Exception)
         def error_occurred(file: str, e: Exception):
             print(file, "处理失败", e)
