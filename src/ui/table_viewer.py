@@ -69,3 +69,6 @@ class TableViewer(QObject):
     def updateData(self, data: pd.DataFrame):
         self._tableViewModel.updateData(data)
         self._tableView.resizeColumnsToContents()
+
+    def data(self, row: int, column: int):
+        return self._tableViewModel._data.iloc[row, column]

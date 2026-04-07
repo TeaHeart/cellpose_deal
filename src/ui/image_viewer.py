@@ -1,6 +1,8 @@
 from PySide6.QtWidgets import QGraphicsScene, QGraphicsView
-from PySide6.QtCore import QEvent, QObject, Qt
-from PySide6.QtGui import QPixmap, QWheelEvent
+from PySide6.QtCore import QEvent, QObject, QPointF, Qt
+from PySide6.QtGui import QBrush, QPen, QPixmap, QWheelEvent
+import cv2
+import numpy as np
 
 
 class ImageViewer(QObject):
@@ -35,3 +37,36 @@ class ImageViewer(QObject):
                 self._graphicsScene.sceneRect(),
                 Qt.AspectRatioMode.KeepAspectRatio,
             )
+
+    def draw_contours(self, masks: np.ndarray, show_label=True):
+        red_brush = QBrush(Qt.GlobalColor.red)
+        green_pen = QPen(Qt.GlobalColor.green, 2)
+
+        # 为每个颗粒绘制轮廓
+        for label in range(1, masks.max() + 1):
+
+            mask = (masks == label).astype(np.uint8)
+            # [第几个(1), 点数量, 1, (x,y)]
+            contours, _ = cv2.findContours(
+                mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE
+            )
+            contours: tuple[np.ndarray]
+
+            # 绘制轮廓
+            if contours:
+                points = contours[0].reshape(-1, 2)
+                pointfs = [QPointF(x, y) for x, y in points]
+                item = self._graphicsScene.addPolygon(pointfs)
+                item.setPen(green_pen)
+                yield label, item
+
+            # 绘制标签
+            if show_label:
+                moment = cv2.moments(mask)
+                if moment["m00"] != 0:
+                    cx = int(moment["m10"] / moment["m00"])
+                    cy = int(moment["m01"] / moment["m00"])
+
+                    item = self._graphicsScene.addSimpleText(str(label))
+                    item.setPos(cx, cy)
+                    item.setBrush(red_brush)

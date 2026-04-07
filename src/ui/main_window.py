@@ -1,10 +1,15 @@
 import os
 import warnings
-from PySide6.QtWidgets import QFileDialog, QMainWindow, QProgressDialog
+from PySide6.QtWidgets import (
+    QApplication,
+    QFileDialog,
+    QGraphicsPolygonItem,
+    QMainWindow,
+    QProgressDialog,
+)
 from PySide6.QtCore import QModelIndex, Qt, Slot
-from PySide6.QtGui import QImage, QPixmap
+from PySide6.QtGui import QPen, QPixmap
 from cellpose import io
-import cv2
 import numpy as np
 import pandas as pd
 from ui.file_tree_viewer import FileTreeViewer
@@ -16,82 +21,6 @@ from ui.table_viewer import TableViewer
 warnings.filterwarnings("ignore", message="Sparse invariant checks")
 
 IMAGE_EXTENSIONS = (".tif", ".tiff")
-
-
-def draw_masks_on_image(image: np.ndarray, masks: np.ndarray, show_outlines=True):
-    """
-    在图像上绘制mask轮廓
-    """
-    # 确保图像是RGB格式
-    if len(image.shape) == 2:
-        image_rgb = cv2.cvtColor(image, cv2.COLOR_GRAY2RGB)
-    else:
-        image_rgb = image.copy()
-
-    # 为每个颗粒绘制轮廓
-    for label in range(1, masks.max() + 1):
-        # 创建单个mask
-        mask = (masks == label).astype(np.uint8)
-
-        # 查找轮廓
-        contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-
-        # 绘制轮廓
-        cv2.drawContours(image_rgb, contours, -1, (0, 255, 0), 2)
-
-        # 可选：在颗粒中心添加标签
-        if show_outlines:
-            # 计算质心
-            moments = cv2.moments(mask)
-            if moments["m00"] != 0:
-                cx = int(moments["m10"] / moments["m00"])
-                cy = int(moments["m01"] / moments["m00"])
-                cv2.putText(
-                    image_rgb,
-                    str(label),
-                    (cx, cy),
-                    cv2.FONT_HERSHEY_SIMPLEX,
-                    0.5,
-                    (255, 0, 0),
-                    2,
-                )
-
-    return image_rgb
-
-
-def numpy_to_qpixmap(np_image: np.ndarray):
-    """
-    将numpy数组转换为QPixmap
-    """
-    if len(np_image.shape) == 2:
-        # 灰度图
-        height, width = np_image.shape
-        bytes_per_line = width
-        qimage = QImage(
-            np_image.data,
-            width,
-            height,
-            bytes_per_line,
-            QImage.Format.Format_Grayscale8,
-        )
-    elif len(np_image.shape) == 3 and np_image.shape[2] == 3:
-        # RGB图
-        height, width, channel = np_image.shape
-        bytes_per_line = 3 * width
-        qimage = QImage(
-            np_image.data, width, height, bytes_per_line, QImage.Format.Format_RGB888
-        )
-    elif len(np_image.shape) == 3 and np_image.shape[2] == 4:
-        # RGBA图
-        height, width, channel = np_image.shape
-        bytes_per_line = 4 * width
-        qimage = QImage(
-            np_image.data, width, height, bytes_per_line, QImage.Format.Format_RGBA8888
-        )
-    else:
-        raise ValueError("Unsupported image format")
-
-    return QPixmap.fromImage(qimage)
 
 
 class MainWindow(QMainWindow):
@@ -114,14 +43,11 @@ class MainWindow(QMainWindow):
         self.image_viewer = ImageViewer(self, self.ui.graphicsView)
 
         self.table_viewer = TableViewer(self, self.ui.tableView)
-
-        self.current_image: np.ndarray = None  # 存储原始图像
-        self.current_masks: np.ndarray = None  # 存储当前masks
-        self.current_df: pd.DataFrame = None  # 存储当前df
-
         self.table_viewer.currentChanged.connect(self.tableView_currentChanged)
 
         self.model = InferenceModel()
+
+        self.current_path: str = None  # 图像路径
 
     def setWindowTitle(self, title: str):
         super().setWindowTitle(f"Cellpose Deal - {title}")
@@ -169,10 +95,9 @@ class MainWindow(QMainWindow):
                 if file_path.lower().endswith(IMAGE_EXTENSIONS):
                     print("current", file_path)
 
-                    pixmap = QPixmap(file_path)
-                    self.image_viewer.set_pixmap(pixmap)
-
-                    self.try_load_npy_csv(file_path)
+                    if self.current_path != file_path:
+                        self.load_image(file_path)
+                        self.current_path = file_path
 
                     self.ui.actionEvalCurrent.setEnabled(True)
 
@@ -233,64 +158,42 @@ class MainWindow(QMainWindow):
         worker.start()
         progress.exec()
 
-    def try_load_npy_csv(self, file_path: str):
+    def load_image(self, file_path: str):
         basename = os.path.splitext(file_path)[0]
         npy_file = f"{basename}_seg.npy"
         csv_file = f"{basename}.csv"
 
-        image = io.imread(file_path)
-        masks = df = None
+        # 图片
+        pixmap = QPixmap(file_path)
+        self.image_viewer.set_pixmap(pixmap)
 
+        self.table_viewer.updateData(pd.DataFrame())
+        self.contours: dict[int, QGraphicsPolygonItem] = {}
+
+        # 遮罩
         if os.path.isfile(npy_file):
             npy: np.ndarray = np.load(npy_file, allow_pickle=True)
-            d: dict = npy.item()
-            masks: np.ndarray = d["masks"]
+            masks: np.ndarray = npy.item()["masks"]
+            for label, contour in self.image_viewer.draw_contours(masks):
+                QApplication.processEvents()
+                self.contours[label] = contour
 
-            overlay_image = draw_masks_on_image(image, masks)
-
-            pixmap = numpy_to_qpixmap(overlay_image)
-
-            self.image_viewer.set_pixmap(pixmap)
-
+        # 表格
         if os.path.isfile(csv_file):
             df = pd.read_csv(csv_file)
             self.table_viewer.updateData(df)
 
-        self.current_image = image
-        self.current_masks = masks
-        self.current_df = df
-
     @Slot(QModelIndex, QModelIndex)
     def tableView_currentChanged(self, current: QModelIndex, previous: QModelIndex):
-        if self.current_masks is not None and self.current_df is not None:
-            if current.isValid():
-                row = current.row()
-                particle_id = self.current_df.iloc[row, 0]
-                self.highlight_particle(particle_id)
+        green_pen = QPen(Qt.GlobalColor.green, 2)
+        red_pen = QPen(Qt.GlobalColor.red, 2)
 
-    def highlight_particle(self, particle_id: int):
-        """
-        高亮显示指定的颗粒
-        """
-        if self.current_masks is None or self.current_image is None:
-            return
+        if previous.isValid():
+            particle_id = self.table_viewer.data(previous.row(), 0)
+            item = self.contours[particle_id]
+            item.setPen(green_pen)
 
-        # 创建高亮图像
-        highlighted_image = draw_masks_on_image(
-            self.current_image, self.current_masks, show_outlines=True
-        )
-
-        # 高亮选中的颗粒（用红色边框）
-        mask = (self.current_masks == particle_id).astype(np.uint8)
-        contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-
-        # 确保图像是RGB
-        if len(highlighted_image.shape) == 2:
-            highlighted_image = cv2.cvtColor(highlighted_image, cv2.COLOR_GRAY2RGB)
-
-        # 用红色粗线绘制选中的颗粒
-        cv2.drawContours(highlighted_image, contours, -1, (255, 0, 0), 3)
-
-        # 更新显示
-        pixmap = numpy_to_qpixmap(highlighted_image)
-        self.image_viewer.set_pixmap(pixmap)
+        if current.isValid():
+            particle_id = self.table_viewer.data(current.row(), 0)
+            item = self.contours[particle_id]
+            item.setPen(red_pen)
