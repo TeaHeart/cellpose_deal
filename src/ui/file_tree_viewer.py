@@ -1,5 +1,6 @@
+import os
 from PySide6.QtWidgets import QFileSystemModel, QTreeView
-from PySide6.QtCore import QModelIndex, QObject, Signal, Slot
+from PySide6.QtCore import QDirIterator, QModelIndex, QObject, Signal, Slot
 
 
 class FileTreeViewer(QObject):
@@ -42,3 +43,29 @@ class FileTreeViewer(QObject):
     def setRootPath(self, path: str):
         root_index = self._treeViewModel.setRootPath(path)
         self._treeView.setRootIndex(root_index)
+
+    def rootPath(self):
+        return self._treeViewModel.rootPath()
+
+    def currentFile(self):
+        index = self._treeViewSelectionModel.currentIndex()
+        path = self._treeViewModel.filePath(index)
+        if os.path.isfile(path):
+            return path
+        return None
+
+    def getFiles(self):
+        root_path = self._treeViewModel.rootPath()
+        files: list[str] = []
+        it = QDirIterator(
+            root_path,
+            QDirIterator.IteratorFlag.Subdirectories
+            | QDirIterator.IteratorFlag.FollowSymlinks,
+        )
+
+        while it.hasNext():
+            it.next()
+            if not it.fileInfo().isDir():
+                files.append(it.filePath())
+
+        return files

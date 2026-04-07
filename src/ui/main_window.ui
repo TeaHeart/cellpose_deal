@@ -100,14 +100,44 @@
     <property name="title">
      <string>文件</string>
     </property>
-    <addaction name="action_open_folder"/>
+    <addaction name="actionOpenFolder"/>
+   </widget>
+   <widget class="QMenu" name="menu_2">
+    <property name="enabled">
+     <bool>false</bool>
+    </property>
+    <property name="title">
+     <string>模型</string>
+    </property>
+    <addaction name="actionModelConfig"/>
+    <addaction name="actionEvalCurrent"/>
+    <addaction name="actionEvalAll"/>
    </widget>
    <addaction name="menu"/>
+   <addaction name="menu_2"/>
   </widget>
   <widget class="QStatusBar" name="statusbar"/>
-  <action name="action_open_folder">
+  <action name="actionOpenFolder">
    <property name="text">
     <string>打开文件夹</string>
+   </property>
+  </action>
+  <action name="actionModelConfig">
+   <property name="text">
+    <string>模型配置</string>
+   </property>
+  </action>
+  <action name="actionEvalCurrent">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>推理选中</string>
+   </property>
+  </action>
+  <action name="actionEvalAll">
+   <property name="text">
+    <string>推理全部</string>
    </property>
   </action>
  </widget>
