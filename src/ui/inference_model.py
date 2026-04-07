@@ -110,12 +110,16 @@ class InferenceWorker(QThread):
 
         for i, file in enumerate(self.files):
             if self._is_canceled:
-                break
+                return
 
             self.progress_updated.emit(i, total, file)
 
             try:
                 image, masks, flows, styles, df = self.model.eval(file)
+
+                if self._is_canceled:
+                    raise Exception("用户取消操作")
+
                 result: InferenceResult = {
                     "success": True,
                     "file": file,
