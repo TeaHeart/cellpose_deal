@@ -12,6 +12,8 @@ from PySide6.QtGui import QPen, QPixmap
 from cellpose import io
 import numpy as np
 import pandas as pd
+import yaml
+from ui.config_dialog import ConfigDialog
 from ui.file_tree_viewer import FileTreeViewer
 from ui.image_viewer import ImageViewer
 from ui.inference_model import InferenceModel, InferenceResult, InferenceWorker
@@ -47,8 +49,6 @@ class MainWindow(QMainWindow):
 
         self.model = InferenceModel()
 
-        self.current_path: str = None  # 图像路径
-
     def setWindowTitle(self, title: str):
         super().setWindowTitle(f"Cellpose Deal - {title}")
 
@@ -63,8 +63,10 @@ class MainWindow(QMainWindow):
 
     @Slot()
     def actionModelConfig_triggered(self):
-        print("actionModelConfig_triggered")
-        # TODO
+        dialog = ConfigDialog(self)
+        dialog.config = self.model.config
+        if dialog.exec():
+            self.model.config = dialog.config
 
     @Slot()
     def actionEvalCurrent_triggered(self):
@@ -95,9 +97,9 @@ class MainWindow(QMainWindow):
                 if file_path.lower().endswith(IMAGE_EXTENSIONS):
                     print("current", file_path)
 
-                    if self.current_path != file_path:
-                        self.load_image(file_path)
-                        self.current_path = file_path
+                    self.ui.treeView.setEnabled(False)
+                    self.load_files(file_path)
+                    self.ui.treeView.setEnabled(True)
 
                     self.ui.actionEvalCurrent.setEnabled(True)
 
@@ -137,6 +139,9 @@ class MainWindow(QMainWindow):
             io.masks_flows_to_seg(image, masks, flows, file)
             df.to_csv(f"{basename}.csv", mode="w+", index=False, encoding="utf-8-sig")
 
+            with open(f"{basename}.yaml", "w+", encoding="utf-8") as f:
+                yaml.safe_dump({"cellpose": self.model.config}, f)
+
             print(file, "完成")
 
         @Slot(list)
@@ -158,8 +163,9 @@ class MainWindow(QMainWindow):
         worker.start()
         progress.exec()
 
-    def load_image(self, file_path: str):
+    def load_files(self, file_path: str):
         basename = os.path.splitext(file_path)[0]
+        yaml_file = f"{basename}.yaml"
         npy_file = f"{basename}_seg.npy"
         csv_file = f"{basename}.csv"
 
@@ -169,6 +175,11 @@ class MainWindow(QMainWindow):
 
         self.table_viewer.updateData(pd.DataFrame())
         self.contours: dict[int, QGraphicsPolygonItem] = {}
+
+        # 配置
+        if os.path.isfile(yaml_file):
+            with open(yaml_file, "r", encoding="utf-8") as f:
+                self.model.config = yaml.safe_load(f)["cellpose"]
 
         # 遮罩
         if os.path.isfile(npy_file):

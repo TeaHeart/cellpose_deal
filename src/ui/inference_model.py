@@ -4,6 +4,7 @@ from typing import TypedDict
 from cellpose import models, io
 from PySide6.QtCore import QThread, Signal
 from skimage.measure import regionprops_table
+import yaml
 
 
 def masks_to_dataframe(masks: np.ndarray, px_size: float):
@@ -42,9 +43,21 @@ def masks_to_dataframe(masks: np.ndarray, px_size: float):
     return df
 
 
+class InferenceConfig(TypedDict):
+    # 像素标尺 (px/μm)
+    px_size: float = 18.5
+    # 颗粒预估直径 (px)
+    diam: float = 100
+    # 迭代次数 0自动
+    niter: int = 0
+
+
 class InferenceModel:
     def __init__(self):
         self.__model = None
+        with open("config.yaml", "r", encoding="utf-8") as f:
+            config = yaml.safe_load(f)
+            self.config: InferenceConfig = config["cellpose"]
 
     @property
     def _model(self):
@@ -58,11 +71,10 @@ class InferenceModel:
     def eval(
         self, file_path: str
     ) -> tuple[np.ndarray, np.ndarray, list[np.ndarray], np.ndarray, pd.DataFrame]:
-        # TODO 提取配置
-        px_size = 18.5
-        diam = 100
-        niter = None
-
+        px_size = self.config["px_size"]
+        diam = self.config["diam"]
+        niter = self.config["niter"] if self.config["niter"] > 0 else None
+        print(px_size, diam, niter)
         image = io.imread(file_path)
         masks, flows, styles = self._model.eval(
             x=image,
