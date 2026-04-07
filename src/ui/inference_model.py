@@ -47,9 +47,9 @@ class InferenceConfig(TypedDict):
     # 像素标尺 (px/μm)
     px_size: float = 18.5
     # 颗粒预估直径 (px)
-    diam: float = 100
-    # 迭代次数 0自动
-    niter: int = 0
+    diam: float = None
+    # 迭代次数
+    niter: int = None
 
 
 class InferenceModel:
@@ -71,9 +71,9 @@ class InferenceModel:
     def eval(
         self, file_path: str
     ) -> tuple[np.ndarray, np.ndarray, list[np.ndarray], np.ndarray, pd.DataFrame]:
-        px_size = self.config["px_size"]
-        diam = self.config["diam"]
-        niter = self.config["niter"] if self.config["niter"] > 0 else None
+        px_size = self.config["px_size"] or 18.5
+        diam = self.config["diam"] or None
+        niter = self.config["niter"] or None # 设置成None使用默认值或自动
         print(px_size, diam, niter)
         image = io.imread(file_path)
         masks, flows, styles = self._model.eval(

@@ -75,9 +75,9 @@ class MainWindow(QMainWindow):
 
     @config.setter
     def config(self, value: InferenceConfig):
-        self.ui.doubleSpinBox_px_size.setValue(value["px_size"])
-        self.ui.doubleSpinBox_diam.setValue(value["diam"])
-        self.ui.spinBox_niter.setValue(value["niter"])
+        self.ui.doubleSpinBox_px_size.setValue(value["px_size"] or 18.5)
+        self.ui.doubleSpinBox_diam.setValue(value["diam"] or 0)
+        self.ui.spinBox_niter.setValue(value["niter"] or 0)
 
     @Slot()
     def actionEvalCurrent_triggered(self):
