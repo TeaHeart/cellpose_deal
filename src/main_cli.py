@@ -23,6 +23,7 @@ def main():
         cellpose_config = config["cellpose"]
         px_size = cellpose_config["px_size"]
         diam = cellpose_config["diam"]
+        niter = cellpose_config["niter"]
 
     model = models.CellposeModel(gpu=True)
 
@@ -34,6 +35,7 @@ def main():
         image_list,
         model,
         diam=diam,
+        niter=niter
     )
 
     df_list = [masks_to_dataframe(masks, px_size) for masks in masks_list]

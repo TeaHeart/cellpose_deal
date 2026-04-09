@@ -5,4 +5,4 @@ cellpose:
   # 颗粒预估直径 (px)
   diam: 100
   # 迭代次数 0自动
-  niter: 0
+  niter: 200
