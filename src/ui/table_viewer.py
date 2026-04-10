@@ -93,6 +93,7 @@ class PandasTableModel(QAbstractTableModel):
 class TableViewer(QObject):
     currentChanged = Signal(QModelIndex, QModelIndex)
     deleteToggled = Signal(int, bool)  # row, is_deleted
+    generateCsvRequested = Signal()  # 请求生成csv
 
     def __init__(self, parent: QObject, tableView: QTableView):
         super().__init__(parent)
@@ -144,6 +145,12 @@ class TableViewer(QObject):
         else:
             action = menu.addAction("标记删除")
             action.triggered.connect(lambda: self._toggle_delete(row, True))
+
+        # 重新生成csv
+        generate_csv_action = menu.addAction("重新生成csv")
+        generate_csv_action.triggered.connect(self.generateCsvRequested.emit)
+
+        menu.addSeparator()
 
         menu.exec(self._tableView.viewport().mapToGlobal(position))
 

@@ -3,10 +3,9 @@ import warnings
 from PySide6.QtWidgets import (
     QFileDialog,
     QMainWindow,
-    QMenu,
     QProgressDialog,
 )
-from PySide6.QtCore import QModelIndex, QPoint, Qt, Slot
+from PySide6.QtCore import QModelIndex, Qt, Slot
 from PySide6.QtGui import QPixmap
 from cellpose import io
 import numpy as np
@@ -55,10 +54,6 @@ class MainWindow(QMainWindow):
 
         self.file_tree_viewer = FileTreeViewer(self, self.ui.treeView)
         self.file_tree_viewer.currentChanged.connect(self.treeView_currentChanged)
-        self.ui.treeView.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
-        self.ui.treeView.customContextMenuRequested.connect(
-            self.treeView_customContextMenuRequested
-        )
 
         self.image_viewer = ImageViewer(self, self.ui.graphicsView)
         # 新增：连接轮廓点击信号
@@ -70,6 +65,8 @@ class MainWindow(QMainWindow):
         self.table_viewer.currentChanged.connect(self.tableView_currentChanged)
         # 新增：连接表格删除信号
         self.table_viewer.deleteToggled.connect(self._on_delete_toggled)
+        # 新增：连接表格生成csv信号
+        self.table_viewer.generateCsvRequested.connect(self._on_generate_csv_requested)
 
         self.model = InferenceModel()
         self.config = self.model.config
@@ -190,36 +187,6 @@ class MainWindow(QMainWindow):
                     self.setEnabled(True)
 
                     self.ui.actionEvalCurrent.setEnabled(True)
-
-    @Slot(QPoint)
-    def treeView_customContextMenuRequested(self, position: QPoint):
-        index = self.ui.treeView.indexAt(position)
-        path = self.file_tree_viewer.filePath(index)
-        basename = os.path.splitext(path)[0]
-        yaml_file = f"{basename}.yaml"
-        npy_file = f"{basename}.npy"
-        csv_file = f"{basename}.csv"
-
-        def npy2csv():
-            npy: np.ndarray = np.load(npy_file, allow_pickle=True)
-            masks: np.ndarray = npy.item()["masks"]
-
-            with open(yaml_file, "r", encoding="utf-8") as f:
-                config: InferenceConfig = yaml.safe_load(f)["cellpose"]
-
-            df: pd.DataFrame = masks_to_dataframe(masks, config["px_size"])
-            df.to_csv(csv_file, mode="w+", index=False, encoding="utf-8-sig")
-
-        if index.isValid():
-            menu = QMenu()
-            lower_path = path.lower()
-
-            if os.path.isfile(path):
-                if lower_path.endswith("npy"):
-                    menu.addAction("生成csv", npy2csv)
-
-            if menu.actions():
-                menu.exec_(self.ui.treeView.viewport().mapToGlobal(position))
 
     def eval_images(self, files: list[str]):
         total = len(files)
@@ -372,3 +339,30 @@ class MainWindow(QMainWindow):
             self.table_viewer._tableViewModel.save_to_csv(csv_file)
         except Exception as e:
             print(f"保存失败: {e}")
+
+    @Slot()
+    def _on_generate_csv_requested(self):
+        """从 npy 生成 csv"""
+        current_file = self.file_tree_viewer.currentFile()
+        if not current_file:
+            return
+
+        basename = os.path.splitext(current_file)[0]
+        yaml_file = f"{basename}.yaml"
+        npy_file = f"{basename}_seg.npy"
+        csv_file = f"{basename}.csv"
+
+        if not os.path.isfile(npy_file):
+            print(f"npy 文件不存在: {npy_file}")
+            return
+
+        npy: np.ndarray = np.load(npy_file, allow_pickle=True)
+        masks: np.ndarray = npy.item()["masks"]
+
+        with open(yaml_file, "r", encoding="utf-8") as f:
+            config: InferenceConfig = yaml.safe_load(f)["cellpose"]
+
+        df: pd.DataFrame = masks_to_dataframe(masks, config["px_size"])
+        df.to_csv(csv_file, mode="w+", index=False, encoding="utf-8-sig")
+        self.table_viewer.updateData(df)
+        print(f"已生成 {csv_file}")
