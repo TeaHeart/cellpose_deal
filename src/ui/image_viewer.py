@@ -1,4 +1,4 @@
-from PySide6.QtWidgets import QApplication, QGraphicsScene, QGraphicsView, QGraphicsSceneMouseEvent, QMenu
+from PySide6.QtWidgets import QApplication, QGraphicsPolygonItem, QGraphicsScene, QGraphicsView, QGraphicsSceneMouseEvent, QMenu
 from PySide6.QtCore import QEvent, QObject, QPointF, Qt, Signal, Slot, QPoint
 from PySide6.QtGui import QBrush, QPen, QPixmap, QWheelEvent, QMouseEvent
 import cv2
@@ -6,7 +6,7 @@ import numpy as np
 
 
 class ImageViewer(QObject):
-    contourClicked = Signal(int)  # 发射被点击的 cell label
+    contourClicked = Signal(int)  # 发射被点击的 cell label (0 表示取消选中)
     deleteToggled = Signal(int, bool)  # label, is_deleted
     def __init__(self, parent: QObject, graphicsView: QGraphicsView):
         super().__init__(parent)
@@ -23,7 +23,7 @@ class ImageViewer(QObject):
 
         # 新增成员
         self._masks: np.ndarray | None = None
-        self._contours: dict[int, object] = {}
+        self._contours: dict[int, QGraphicsPolygonItem] = {}
         self._selected_label: int | None = None
         self._deleted_labels: set[int] = set()
 
@@ -120,15 +120,27 @@ class ImageViewer(QObject):
         label = int(self._masks[y, x])
         if label > 0:
             self._select_contour(label)
-            self.contourClicked.emit(label)
+        else:
+            self.deselect_contour()
+        self.contourClicked.emit(label)
+
+    def deselect_contour(self):
+        """取消选中轮廓"""
+        # 先清除选中状态，再恢复颜色
+        label = self._selected_label
+        self._selected_label = None
+        if label and label in self._contours:
+            self._update_contour_color(label)
 
     def _select_contour(self, label: int):
         """选中指定轮廓"""
-        # 恢复之前选中的轮廓颜色
-        if self._selected_label and self._selected_label in self._contours:
-            self._update_contour_color(self._selected_label)
-
+        # 先保存旧标签并更新选中状态，再恢复旧标签颜色
+        old_label = self._selected_label
         self._selected_label = label
+
+        # 恢复之前选中的轮廓颜色
+        if old_label and old_label in self._contours:
+            self._update_contour_color(old_label)
 
         # 设置新选中轮廓为红色
         if label in self._contours:

@@ -292,22 +292,26 @@ class MainWindow(QMainWindow):
 
     @Slot(QModelIndex, QModelIndex)
     def tableView_currentChanged(self, current: QModelIndex, previous: QModelIndex):
-        # 恢复之前选中轮廓的颜色（通过 ImageViewer 内部状态管理）
-        if previous.isValid():
-            particle_id = self.table_viewer.data(previous.row(), 0)
-            self.image_viewer.set_deleted(particle_id, self.table_viewer._tableViewModel.is_deleted(previous.row()))
-
-        # 设置新选中轮廓为红色
+        # 设置新选中轮廓
         if current.isValid():
             particle_id = self.table_viewer.data(current.row(), 0)
-            self.image_viewer._select_contour(particle_id)
+            # 只有当 ImageViewer 选中不同的轮廓时才切换
+            if self.image_viewer._selected_label != particle_id:
+                self.image_viewer.deselect_contour()
+                self.image_viewer._select_contour(particle_id)
+        else:
+            self.image_viewer.deselect_contour()
 
     @Slot(int)
     def _on_contour_clicked(self, label: int):
         """处理图片中细胞被点击"""
-        # label 从 1 开始，row 从 0 开始
-        row = label - 1
-        self.table_viewer.selectRow(row)
+        if label > 0:
+            # label 从 1 开始，row 从 0 开始
+            row = label - 1
+            self.table_viewer.selectRow(row)
+        else:
+            # 点击空白区域，取消选中
+            self.table_viewer._tableView.clearSelection()
 
     @Slot(int, bool)
     def _on_delete_toggled(self, row: int, deleted: bool):
@@ -364,5 +368,12 @@ class MainWindow(QMainWindow):
 
         df: pd.DataFrame = masks_to_dataframe(masks, config["px_size"])
         df.to_csv(csv_file, mode="w+", index=False, encoding="utf-8-sig")
+
+        # 重置 imageview 的选中状态和删除状态
+        self.image_viewer.deselect_contour()
+        self.image_viewer._deleted_labels.clear()
+        for label in self.image_viewer._contours:
+            self.image_viewer._update_contour_color(label)
+
         self.table_viewer.updateData(df)
         print(f"已生成 {csv_file}")
