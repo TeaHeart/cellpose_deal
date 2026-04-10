@@ -1,15 +1,13 @@
 import os
 import warnings
 from PySide6.QtWidgets import (
-    QApplication,
     QFileDialog,
-    QGraphicsPolygonItem,
     QMainWindow,
     QMenu,
     QProgressDialog,
 )
 from PySide6.QtCore import QModelIndex, QPoint, Qt, Slot
-from PySide6.QtGui import QPen, QPixmap
+from PySide6.QtGui import QPixmap
 from cellpose import io
 import numpy as np
 import pandas as pd
@@ -63,9 +61,15 @@ class MainWindow(QMainWindow):
         )
 
         self.image_viewer = ImageViewer(self, self.ui.graphicsView)
+        # 新增：连接轮廓点击信号
+        self.image_viewer.contourClicked.connect(self._on_contour_clicked)
+        # 新增：连接图片右键删除信号
+        self.image_viewer.deleteToggled.connect(self._on_image_delete_toggled)
 
         self.table_viewer = TableViewer(self, self.ui.tableView)
         self.table_viewer.currentChanged.connect(self.tableView_currentChanged)
+        # 新增：连接表格删除信号
+        self.table_viewer.deleteToggled.connect(self._on_delete_toggled)
 
         self.model = InferenceModel()
         self.config = self.model.config
@@ -122,6 +126,11 @@ class MainWindow(QMainWindow):
                             .replace(".csv", "")
                         )
                         df = pd.read_csv(path)
+
+                        # 过滤 已删除 行和 已删除 列
+                        if '已删除' in df.columns:
+                            df = df[~df['已删除']].drop(columns=['已删除'])
+
                         df.to_excel(writer, sheet_name=sheet, index=False)
 
     @Slot()
@@ -289,7 +298,6 @@ class MainWindow(QMainWindow):
         self.image_viewer.set_pixmap(pixmap)
 
         self.table_viewer.updateData(pd.DataFrame())
-        self.contours: dict[int, QGraphicsPolygonItem] = {}
 
         # 配置
         if os.path.isfile(yaml_file):
@@ -301,26 +309,66 @@ class MainWindow(QMainWindow):
             if os.path.isfile(npy_file):
                 npy: np.ndarray = np.load(npy_file, allow_pickle=True)
                 masks: np.ndarray = npy.item()["masks"]
-                for label, contour in self.image_viewer.draw_contours(masks):
-                    QApplication.processEvents()
-                    self.contours[label] = contour
+                self.image_viewer.draw_contours(masks)
 
         # 表格
         if os.path.isfile(csv_file):
             df = pd.read_csv(csv_file)
             self.table_viewer.updateData(df)
 
+            # 恢复删除状态到图片
+            if '已删除' in df.columns:
+                for row, deleted in enumerate(df['已删除']):
+                    if deleted:
+                        label = row + 1
+                        self.image_viewer.set_deleted(label, True)
+
     @Slot(QModelIndex, QModelIndex)
     def tableView_currentChanged(self, current: QModelIndex, previous: QModelIndex):
-        green_pen = QPen(Qt.GlobalColor.green, 2)
-        red_pen = QPen(Qt.GlobalColor.red, 2)
-
+        # 恢复之前选中轮廓的颜色（通过 ImageViewer 内部状态管理）
         if previous.isValid():
             particle_id = self.table_viewer.data(previous.row(), 0)
-            item = self.contours[particle_id]
-            item.setPen(green_pen)
+            self.image_viewer.set_deleted(particle_id, self.table_viewer._tableViewModel.is_deleted(previous.row()))
 
+        # 设置新选中轮廓为红色
         if current.isValid():
             particle_id = self.table_viewer.data(current.row(), 0)
-            item = self.contours[particle_id]
-            item.setPen(red_pen)
+            self.image_viewer._select_contour(particle_id)
+
+    @Slot(int)
+    def _on_contour_clicked(self, label: int):
+        """处理图片中细胞被点击"""
+        # label 从 1 开始，row 从 0 开始
+        row = label - 1
+        self.table_viewer.selectRow(row)
+
+    @Slot(int, bool)
+    def _on_delete_toggled(self, row: int, deleted: bool):
+        """处理表格行删除状态切换"""
+        # row 从 0 开始，label 从 1 开始
+        label = row + 1
+        self.image_viewer.set_deleted(label, deleted)
+        self._save_current_csv()
+
+    @Slot(int, bool)
+    def _on_image_delete_toggled(self, label: int, deleted: bool):
+        """处理图片右键删除状态切换"""
+        # label 从 1 开始，row 从 0 开始
+        row = label - 1
+        self.image_viewer.set_deleted(label, deleted)
+        self.table_viewer._tableViewModel.set_deleted(row, deleted)
+        self._save_current_csv()
+
+    def _save_current_csv(self):
+        """保存当前 CSV 文件"""
+        current_file = self.file_tree_viewer.currentFile()
+        if not current_file:
+            return
+
+        basename = os.path.splitext(current_file)[0]
+        csv_file = f"{basename}.csv"
+
+        try:
+            self.table_viewer._tableViewModel.save_to_csv(csv_file)
+        except Exception as e:
+            print(f"保存失败: {e}")
