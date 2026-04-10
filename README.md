@@ -4,9 +4,10 @@
 
 ## 功能特性
 
-- **批量处理**：递归扫描文件夹，批量处理图像
-- **可视化**：可视化查看分割结果，轮廓叠加显示，选中高亮
-- **数据保存**：自动保存npy，csv和yaml文件
+- **批量处理**: 批量处理图像，支持推理单个/全部
+- **交互审查**：文件树浏览，上一张/下一张快速浏览，调整推理参数，表格和图像高亮与删除
+- **数据导出**：自动保存 npy、csv 和 yaml 文件，全部导出为 xlsx
+- **快捷操作**：快捷键绑定，快速操作打开、推理、切换图片等
 
 ![demo](./docs/demo.png)
 
@@ -40,7 +41,7 @@ pip install -r .\requirements.txt -f https://mirrors.aliyun.com/pytorch-wheels/c
 # GUI
 python setup.py build_ui
 python src/main_gui.py
-# CLI
+# CLI 已弃用
 python src/main_cli.py
 # cellpose 的 GUI
 cellpose.exe
