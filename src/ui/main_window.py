@@ -197,7 +197,7 @@ class MainWindow(QMainWindow):
         path = self.file_tree_viewer.filePath(index)
         basename = os.path.splitext(path)[0]
         yaml_file = f"{basename}.yaml"
-        npy_file = f"{basename}_seg.npy"
+        npy_file = f"{basename}.npy"
         csv_file = f"{basename}.csv"
 
         def npy2csv():
