@@ -154,11 +154,11 @@
      <string>文件</string>
     </property>
     <addaction name="actionOpenFolder"/>
+    <addaction name="actionExportAll"/>
+    <addaction name="actionPreviousImage"/>
+    <addaction name="actionNextImage"/>
    </widget>
    <widget class="QMenu" name="menu_2">
-    <property name="enabled">
-     <bool>false</bool>
-    </property>
     <property name="title">
      <string>模型</string>
     </property>
@@ -174,18 +174,24 @@
    <property name="text">
     <string>打开文件夹</string>
    </property>
+   <property name="shortcut">
+    <string>Ctrl+O</string>
+   </property>
   </action>
   <action name="actionEvalCurrent">
-   <property name="enabled">
-    <bool>false</bool>
-   </property>
    <property name="text">
     <string>推理选中</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+R</string>
    </property>
   </action>
   <action name="actionEvalAll">
    <property name="text">
     <string>推理全部</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+Shift+R</string>
    </property>
   </action>
   <action name="actionLoadMask">
@@ -197,6 +203,27 @@
    </property>
    <property name="text">
     <string>加载遮罩</string>
+   </property>
+  </action>
+  <action name="actionPreviousImage">
+   <property name="text">
+    <string>上一张</string>
+   </property>
+   <property name="shortcut">
+    <string>Left</string>
+   </property>
+  </action>
+  <action name="actionNextImage">
+   <property name="text">
+    <string>下一张</string>
+   </property>
+   <property name="shortcut">
+    <string>Right</string>
+   </property>
+  </action>
+  <action name="actionExportAll">
+   <property name="text">
+    <string>导出为xlsx</string>
    </property>
   </action>
  </widget>
