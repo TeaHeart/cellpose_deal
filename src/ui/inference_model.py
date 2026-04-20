@@ -1,6 +1,7 @@
+import cv2
 import numpy as np
 import pandas as pd
-from typing import TypedDict
+from typing import NamedTuple, TypedDict
 from cellpose import models, io
 from PySide6.QtCore import QThread, Signal
 from skimage.measure import regionprops_table
@@ -43,6 +44,44 @@ def masks_to_dataframe(masks: np.ndarray, px_size: float):
     return df
 
 
+class Point(NamedTuple):
+    x: int
+    y: int
+
+
+class Contour(NamedTuple):
+    label: int
+    center: Point  # (x, y)
+    points: list[Point]  # [(x1, y1), ...]
+
+
+def masks_to_contours(masks: np.ndarray):
+    # 为每个颗粒查找轮廓和中心
+    results: list[Contour] = []
+    for label in range(1, masks.max() + 1):
+        mask = (masks == label).astype(np.uint8)
+        # [第几个, 点数量, 1, (x,y)]
+        contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        contours: tuple[np.ndarray]
+
+        # 轮廓
+        points: list[Point] = []
+        if contours:
+            points = [(int(x), int(y)) for x, y in contours[0].reshape(-1, 2)]
+
+        # 中心
+        center: Point = (0, 0)
+        moment = cv2.moments(mask)
+        if moment["m00"] != 0:
+            cx = int(moment["m10"] / moment["m00"])
+            cy = int(moment["m01"] / moment["m00"])
+            center = (cx, cy)
+
+        results.append((label, center, points))
+
+    return results
+
+
 class InferenceConfig(TypedDict):
     # 像素标尺 (px/μm)
     px_size: float = 18.5
@@ -68,9 +107,14 @@ class InferenceModel:
 
         return self.__model
 
-    def eval(
-        self, file_path: str
-    ) -> tuple[np.ndarray, np.ndarray, list[np.ndarray], np.ndarray, pd.DataFrame]:
+    def eval(self, file_path: str) -> tuple[
+        np.ndarray,
+        np.ndarray,
+        list[np.ndarray],
+        np.ndarray,
+        pd.DataFrame,
+        list[Contour],
+    ]:
         px_size = self.config["px_size"] or 18.5
         diam = self.config["diam"] or None
         niter = self.config["niter"] or None  # 设置成None使用默认值或自动
@@ -82,8 +126,9 @@ class InferenceModel:
             niter=niter,
         )
         df = masks_to_dataframe(masks, px_size)
+        contours = masks_to_contours(masks)
 
-        return image, masks, flows, styles, df
+        return image, masks, flows, styles, df, contours
 
 
 class InferenceResult(TypedDict):
@@ -95,6 +140,7 @@ class InferenceResult(TypedDict):
     flows: list[np.ndarray] | None
     styles: np.ndarray | None
     df: pd.DataFrame | None
+    contours: list[Contour] | None
 
 
 class InferenceWorker(QThread):
@@ -127,7 +173,7 @@ class InferenceWorker(QThread):
             self.progress_updated.emit(i, total, file)
 
             try:
-                image, masks, flows, styles, df = self.model.eval(file)
+                image, masks, flows, styles, df, contours = self.model.eval(file)
 
                 if self._is_canceled:
                     raise Exception("用户取消操作")
@@ -140,6 +186,7 @@ class InferenceWorker(QThread):
                     "flows": flows,
                     "styles": styles,
                     "df": df,
+                    "contours": contours,
                 }
                 results.append(result)
                 self.file_completed.emit(result)

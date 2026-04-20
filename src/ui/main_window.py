@@ -1,4 +1,5 @@
 import os
+import pickle
 import warnings
 from PySide6.QtWidgets import (
     QFileDialog,
@@ -14,6 +15,7 @@ import yaml
 from ui.file_tree_viewer import FileTreeViewer
 from ui.image_viewer import ImageViewer
 from ui.inference_model import (
+    Contour,
     InferenceConfig,
     InferenceModel,
     InferenceResult,
@@ -259,6 +261,7 @@ class MainWindow(QMainWindow):
             masks = result["masks"]
             flows = result["flows"]
             df = result["df"]
+            contours = result["contours"]
 
             basename = os.path.splitext(file)[0]
 
@@ -268,6 +271,9 @@ class MainWindow(QMainWindow):
 
             with open(f"{basename}.yaml", "w+", encoding="utf-8") as f:
                 yaml.safe_dump({"cellpose": self.model.config}, f)
+
+            with open(f"{basename}.pkl", "wb+") as f:
+                pickle.dump(contours, f)
 
             print(file, "完成")
 
@@ -301,6 +307,7 @@ class MainWindow(QMainWindow):
         yaml_file = f"{basename}.yaml"
         npy_file = f"{basename}_seg.npy"
         csv_file = f"{basename}.csv"
+        pkl_file = f"{basename}.pkl"
 
         # 图片
         pixmap = QPixmap(file_path)
@@ -313,12 +320,19 @@ class MainWindow(QMainWindow):
             with open(yaml_file, "r", encoding="utf-8") as f:
                 self.config = yaml.safe_load(f)["cellpose"]
 
-        # 遮罩
-        if self.ui.checkBox_loadMask.isChecked():
+        load_mask = self.ui.checkBox_loadMask.isChecked()
+
+        if load_mask:
+            # 轮廓
+            if os.path.isfile(pkl_file):
+                with open(pkl_file, "rb") as f:
+                    contours: list[Contour] = pickle.load(f)
+
+            # 遮罩
             if os.path.isfile(npy_file):
                 npy: np.ndarray = np.load(npy_file, allow_pickle=True)
                 masks: np.ndarray = npy.item()["masks"]
-                self.image_viewer.draw_contours(masks)
+                self.image_viewer.draw_contours(masks, contours)
 
         # 表格
         if os.path.isfile(csv_file):
@@ -326,11 +340,12 @@ class MainWindow(QMainWindow):
             self.table_viewer.updateData(df)
 
             # 恢复删除状态到图片
-            if "已删除" in df.columns:
-                for row, deleted in enumerate(df["已删除"]):
-                    if deleted:
-                        label = row + 1
-                        self.image_viewer.set_deleted(label, True)
+            if load_mask:
+                if "已删除" in df.columns:
+                    for row, deleted in enumerate(df["已删除"]):
+                        if deleted:
+                            label = row + 1
+                            self.image_viewer.set_deleted(label, True)
 
     @Slot(QModelIndex, QModelIndex)
     def tableView_currentChanged(self, current: QModelIndex, previous: QModelIndex):

@@ -215,3 +215,4 @@ output
 test_data/**/*.npy
 test_data/**/*.csv
 test_data/**/*.yaml
+test_data/**/*.pkl
