@@ -132,34 +132,49 @@ class MainWindow(QMainWindow):
 
                         df.to_excel(writer, sheet_name=sheet, index=False)
 
+    def is_image(self, index: QModelIndex):
+        path = self.file_tree_viewer.filePath(index)
+        return path.lower().endswith(IMAGE_EXTENSIONS)
+
     @Slot()
     def actionPreviousImage_triggered(self):
-        prev: QModelIndex = None
-        selected = self.file_tree_viewer.currentIndex()
+        indexes = list(self.file_tree_viewer.listIndexes())
+        image_indexes = [index for index in indexes if self.is_image(index)]
 
-        for index in self.file_tree_viewer.listIndexes():
-            if index == selected:
-                if prev:
-                    self.file_tree_viewer.setCurrentIndex(prev)
-                break
+        total = len(image_indexes)
+        selected_index = indexes.index(self.file_tree_viewer.currentIndex())
 
-            path = self.file_tree_viewer.filePath(index)
-            if path.lower().endswith(IMAGE_EXTENSIONS):
-                prev = index
+        selected_index -= 1
+        while selected_index >= 0 and not self.is_image(indexes[selected_index]):
+            selected_index -= 1
+
+        if selected_index < 0:
+            index = image_indexes[0]
+        else:
+            index = indexes[selected_index]
+        image_i = image_indexes.index(index)
+
+        self.file_tree_viewer.setCurrentIndex(index)
 
     @Slot()
     def actionNextImage_triggered(self):
-        selected = self.file_tree_viewer.currentIndex()
-        found = False
-        for index in self.file_tree_viewer.listIndexes():
-            if not found:
-                if index == selected:
-                    found = True
-            else:
-                path = self.file_tree_viewer.filePath(index)
-                if path.lower().endswith(IMAGE_EXTENSIONS):
-                    self.file_tree_viewer.setCurrentIndex(index)
-                    break
+        indexes = list(self.file_tree_viewer.listIndexes())
+        image_indexes = [index for index in indexes if self.is_image(index)]
+
+        total = len(image_indexes)
+        selected_index = indexes.index(self.file_tree_viewer.currentIndex())
+
+        selected_index += 1
+        while selected_index < total and not self.is_image(indexes[selected_index]):
+            selected_index += 1
+
+        if selected_index >= total:
+            index = image_indexes[-1]
+        else:
+            index = indexes[selected_index]
+        image_i = image_indexes.index(index)
+
+        self.file_tree_viewer.setCurrentIndex(index)
 
     @Slot()
     def pushButton_evalCurrent_clicked(self):
