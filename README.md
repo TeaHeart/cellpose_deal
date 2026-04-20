@@ -15,11 +15,25 @@
 
 ### 环境要求
 
-> 开发测试用的以下环境
+```txt
+# 开发测试环境如下
+Python 3.11
 
-- Python 3.11
-- requirements.txt
-- torch==2.11.0+cu128
+# 核心依赖
+cellpose==4.1.0
+PySide6==6.11.0
+torch==2.11.0+cu128
+torchvision==0.26.0+cu128
+pandas==2.3.3
+scikit-image==0.25.2
+PyYAML==6.0.3
+openpyxl==3.1.5
+
+# 可选依赖，用于cellpose原生的GUI应用，或直接使用 pip install cellpose[gui]
+QtPy==2.4.3
+pyqtgraph==0.14.0
+superqt==0.8.1
+```
 
 ### 安装依赖
 
