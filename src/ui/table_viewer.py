@@ -1,6 +1,15 @@
 import pandas as pd
 from PySide6.QtWidgets import QTableView, QMenu
-from PySide6.QtCore import QAbstractTableModel, QModelIndex, QObject, Qt, Signal, Slot, QPoint, QItemSelectionModel
+from PySide6.QtCore import (
+    QAbstractTableModel,
+    QModelIndex,
+    QObject,
+    Qt,
+    Signal,
+    Slot,
+    QPoint,
+    QItemSelectionModel,
+)
 from PySide6.QtGui import QColor
 
 
@@ -61,15 +70,15 @@ class PandasTableModel(QAbstractTableModel):
 
     def _ensure_deleted_column(self):
         """确保数据包含 已删除 列，不存在则添加"""
-        if '已删除' not in self._data.columns:
-            self._data['已删除'] = False
+        if "已删除" not in self._data.columns:
+            self._data["已删除"] = False
 
     def set_deleted(self, row: int, deleted: bool):
         """设置行的删除状态"""
         if row < 0 or row >= len(self._data):
             return
         self._ensure_deleted_column()
-        self._data.iloc[row, self._data.columns.get_loc('已删除')] = deleted
+        self._data.iloc[row, self._data.columns.get_loc("已删除")] = deleted
         # 通知视图更新
         top_left = self.index(row, 0)
         col_count = self.columnCount()
@@ -82,12 +91,12 @@ class PandasTableModel(QAbstractTableModel):
         if row < 0 or row >= len(self._data):
             return False
         self._ensure_deleted_column()
-        return bool(self._data.iloc[row]['已删除'])
+        return bool(self._data.iloc[row]["已删除"])
 
     def save_to_csv(self, path: str):
         """保存数据到 CSV（保留 已删除 列）"""
         self._ensure_deleted_column()
-        self._data.to_csv(path, index=False, encoding='utf-8-sig')
+        self._data.to_csv(path, index=False, encoding="utf-8-sig")
 
 
 class TableViewer(QObject):
@@ -122,7 +131,9 @@ class TableViewer(QObject):
             return
         index = self._tableViewModel.index(row, 0)
         self._tableView.selectionModel().setCurrentIndex(
-            index, QItemSelectionModel.SelectionFlag.ClearAndSelect | QItemSelectionModel.SelectionFlag.Rows
+            index,
+            QItemSelectionModel.SelectionFlag.ClearAndSelect
+            | QItemSelectionModel.SelectionFlag.Rows,
         )
         self._tableView.scrollTo(index)
 

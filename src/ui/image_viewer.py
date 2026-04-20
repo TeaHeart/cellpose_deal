@@ -1,6 +1,13 @@
-from PySide6.QtWidgets import QApplication, QGraphicsPolygonItem, QGraphicsScene, QGraphicsView, QGraphicsSceneMouseEvent, QMenu
+from PySide6.QtWidgets import (
+    QApplication,
+    QGraphicsPolygonItem,
+    QGraphicsScene,
+    QGraphicsView,
+    QGraphicsSceneMouseEvent,
+    QMenu,
+)
 from PySide6.QtCore import QEvent, QObject, QPointF, Qt, Signal, Slot, QPoint
-from PySide6.QtGui import QBrush, QPen, QPixmap, QWheelEvent, QMouseEvent
+from PySide6.QtGui import QBrush, QPen, QPixmap, QWheelEvent
 import cv2
 import numpy as np
 
@@ -8,6 +15,7 @@ import numpy as np
 class ImageViewer(QObject):
     contourClicked = Signal(int)  # 发射被点击的 cell label (0 表示取消选中)
     deleteToggled = Signal(int, bool)  # label, is_deleted
+
     def __init__(self, parent: QObject, graphicsView: QGraphicsView):
         super().__init__(parent)
         self._graphicsView = graphicsView
@@ -75,7 +83,7 @@ class ImageViewer(QObject):
 
         # 为每个颗粒绘制轮廓
         for label in range(1, masks.max() + 1):
-            QApplication.processEvents() # 临时解决
+            QApplication.processEvents()  # 临时解决
             mask = (masks == label).astype(np.uint8)
             # [第几个(1), 点数量, 1, (x,y)]
             contours, _ = cv2.findContours(

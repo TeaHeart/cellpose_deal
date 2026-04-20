@@ -32,10 +32,7 @@ def main():
     output_dirs_list = list(enum_output_dirs(image_path_list))
 
     masks_list, flows_list, styles_list = eval_images(
-        image_list,
-        model,
-        diam=diam,
-        niter=niter
+        image_list, model, diam=diam, niter=niter
     )
 
     df_list = [masks_to_dataframe(masks, px_size) for masks in masks_list]

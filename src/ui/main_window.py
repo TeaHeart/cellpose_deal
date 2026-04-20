@@ -127,8 +127,8 @@ class MainWindow(QMainWindow):
                         df = pd.read_csv(path)
 
                         # 过滤 已删除 行和 已删除 列
-                        if '已删除' in df.columns:
-                            df = df[~df['已删除']].drop(columns=['已删除'])
+                        if "已删除" in df.columns:
+                            df = df[~df["已删除"]].drop(columns=["已删除"])
 
                         df.to_excel(writer, sheet_name=sheet, index=False)
 
@@ -313,8 +313,8 @@ class MainWindow(QMainWindow):
             self.table_viewer.updateData(df)
 
             # 恢复删除状态到图片
-            if '已删除' in df.columns:
-                for row, deleted in enumerate(df['已删除']):
+            if "已删除" in df.columns:
+                for row, deleted in enumerate(df["已删除"]):
                     if deleted:
                         label = row + 1
                         self.image_viewer.set_deleted(label, True)

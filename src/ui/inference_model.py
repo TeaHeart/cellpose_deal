@@ -73,7 +73,7 @@ class InferenceModel:
     ) -> tuple[np.ndarray, np.ndarray, list[np.ndarray], np.ndarray, pd.DataFrame]:
         px_size = self.config["px_size"] or 18.5
         diam = self.config["diam"] or None
-        niter = self.config["niter"] or None # 设置成None使用默认值或自动
+        niter = self.config["niter"] or None  # 设置成None使用默认值或自动
         print(px_size, diam, niter)
         image = io.imread(file_path)
         masks, flows, styles = self._model.eval(
