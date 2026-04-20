@@ -26,6 +26,16 @@
         "isDefault": true
       },
       "problemMatcher": []
+    },
+    {
+      "label": "format",
+      "type": "shell",
+      "command": "cmd",
+      "args": [
+        "/c",
+        "call ${workspaceFolder}\\.venv\\Scripts\\activate.bat && python setup.py format"
+      ],
+      "problemMatcher": []
     }
   ]
 }

@@ -29,6 +29,9 @@ scikit-image==0.25.2
 PyYAML==6.0.3
 openpyxl==3.1.5
 
+# 格式化
+black==25.1.0
+
 # 可选依赖，用于cellpose原生的GUI应用，或直接使用 pip install cellpose[gui]
 QtPy==2.4.3
 pyqtgraph==0.14.0
