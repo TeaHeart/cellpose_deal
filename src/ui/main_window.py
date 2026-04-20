@@ -35,8 +35,8 @@ class MainWindow(QMainWindow):
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
 
-        self.ui.menu_2.setEnabled(False)
-        self.ui.actionEvalCurrent.setEnabled(False)
+        self.ui.formLayoutWidget.setEnabled(False)
+        self.ui.pushButton_evalCurrent.setEnabled(False)
         self.ui.actionExportAll.setEnabled(False)
         self.ui.actionPreviousImage.setEnabled(False)
         self.ui.actionNextImage.setEnabled(False)
@@ -47,8 +47,10 @@ class MainWindow(QMainWindow):
             self.actionPreviousImage_triggered
         )
         self.ui.actionNextImage.triggered.connect(self.actionNextImage_triggered)
-        self.ui.actionEvalCurrent.triggered.connect(self.actionEvalCurrent_triggered)
-        self.ui.actionEvalAll.triggered.connect(self.actionEvalAll_triggered)
+        self.ui.pushButton_evalCurrent.clicked.connect(
+            self.pushButton_evalCurrent_clicked
+        )
+        self.ui.pushButton_evalAll.clicked.connect(self.pushButton_evalAll_clicked)
 
         self.setWindowTitle("Welcome")
 
@@ -80,7 +82,7 @@ class MainWindow(QMainWindow):
 
         if folder_path:
             self.file_tree_viewer.setRootPath(folder_path)
-            self.ui.menu_2.setEnabled(True)
+            self.ui.formLayoutWidget.setEnabled(True)
             self.ui.actionExportAll.setEnabled(True)
             self.ui.actionPreviousImage.setEnabled(True)
             self.ui.actionNextImage.setEnabled(True)
@@ -160,21 +162,31 @@ class MainWindow(QMainWindow):
                     break
 
     @Slot()
-    def actionEvalCurrent_triggered(self):
+    def pushButton_evalCurrent_clicked(self):
         file = self.file_tree_viewer.currentFile()
 
         if file.lower().endswith(IMAGE_EXTENSIONS):
             self.eval_images([file])
 
     @Slot()
-    def actionEvalAll_triggered(self):
+    def pushButton_evalAll_clicked(self):
+        def should_include(file: str, is_overwrite: bool):
+            if not file.lower().endswith(IMAGE_EXTENSIONS):
+                return False
+            if is_overwrite:
+                return True
+            basename = os.path.splitext(file)[0]
+            npy_file = f"{basename}_seg.npy"
+            return not os.path.isfile(npy_file)
+
+        is_overwrite = self.ui.checkBox_overwrite.isChecked()
         files = self.file_tree_viewer.getFiles()
-        files = [file for file in files if file.lower().endswith(IMAGE_EXTENSIONS)]
+        files = [file for file in files if should_include(file, is_overwrite)]
         self.eval_images(files)
 
     @Slot(QModelIndex)
     def treeView_currentChanged(self, current: QModelIndex, previous: QModelIndex):
-        self.ui.actionEvalCurrent.setEnabled(False)
+        self.ui.pushButton_evalCurrent.setEnabled(False)
 
         if current.isValid():
             file_path = self.file_tree_viewer.filePath(current)
@@ -186,7 +198,7 @@ class MainWindow(QMainWindow):
                     self.load_files(file_path)
                     self.setEnabled(True)
 
-                    self.ui.actionEvalCurrent.setEnabled(True)
+                    self.ui.pushButton_evalCurrent.setEnabled(True)
 
     def eval_images(self, files: list[str]):
         total = len(files)
@@ -272,7 +284,7 @@ class MainWindow(QMainWindow):
                 self.config = yaml.safe_load(f)["cellpose"]
 
         # 遮罩
-        if self.ui.actionLoadMask.isChecked():
+        if self.ui.checkBox_loadMask.isChecked():
             if os.path.isfile(npy_file):
                 npy: np.ndarray = np.load(npy_file, allow_pickle=True)
                 masks: np.ndarray = npy.item()["masks"]

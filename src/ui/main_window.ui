@@ -91,6 +91,37 @@
            </property>
           </widget>
          </item>
+         <item row="3" column="0">
+          <widget class="QCheckBox" name="checkBox_loadMask">
+           <property name="text">
+            <string>加载遮罩</string>
+           </property>
+           <property name="checked">
+            <bool>true</bool>
+           </property>
+          </widget>
+         </item>
+         <item row="3" column="1">
+          <widget class="QPushButton" name="pushButton_evalCurrent">
+           <property name="text">
+            <string>推理选中</string>
+           </property>
+          </widget>
+         </item>
+         <item row="4" column="0">
+          <widget class="QCheckBox" name="checkBox_overwrite">
+           <property name="text">
+            <string>覆盖模式</string>
+           </property>
+          </widget>
+         </item>
+         <item row="4" column="1">
+          <widget class="QPushButton" name="pushButton_evalAll">
+           <property name="text">
+            <string>推理全部</string>
+           </property>
+          </widget>
+         </item>
         </layout>
        </widget>
       </widget>
@@ -158,16 +189,7 @@
     <addaction name="actionPreviousImage"/>
     <addaction name="actionNextImage"/>
    </widget>
-   <widget class="QMenu" name="menu_2">
-    <property name="title">
-     <string>模型</string>
-    </property>
-    <addaction name="actionEvalCurrent"/>
-    <addaction name="actionEvalAll"/>
-    <addaction name="actionLoadMask"/>
-   </widget>
    <addaction name="menu"/>
-   <addaction name="menu_2"/>
   </widget>
   <widget class="QStatusBar" name="statusbar"/>
   <action name="actionOpenFolder">
@@ -176,33 +198,6 @@
    </property>
    <property name="shortcut">
     <string>Ctrl+O</string>
-   </property>
-  </action>
-  <action name="actionEvalCurrent">
-   <property name="text">
-    <string>推理选中</string>
-   </property>
-   <property name="shortcut">
-    <string>Ctrl+R</string>
-   </property>
-  </action>
-  <action name="actionEvalAll">
-   <property name="text">
-    <string>推理全部</string>
-   </property>
-   <property name="shortcut">
-    <string>Ctrl+Shift+R</string>
-   </property>
-  </action>
-  <action name="actionLoadMask">
-   <property name="checkable">
-    <bool>true</bool>
-   </property>
-   <property name="checked">
-    <bool>true</bool>
-   </property>
-   <property name="text">
-    <string>加载遮罩</string>
    </property>
   </action>
   <action name="actionPreviousImage">
