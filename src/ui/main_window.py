@@ -269,6 +269,7 @@ class MainWindow(QMainWindow):
                 for result in results:
                     if result["success"]:
                         self.load_files(result["file"])
+                        break
 
         @Slot(str, Exception)
         def error_occurred(file: str, e: Exception):
