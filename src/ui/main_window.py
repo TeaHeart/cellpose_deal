@@ -155,6 +155,7 @@ class MainWindow(QMainWindow):
         image_i = image_indexes.index(index)
 
         self.file_tree_viewer.setCurrentIndex(index)
+        self.ui.statusbar.showMessage(f"第 {image_i+1}/{total} 张")
 
     @Slot()
     def actionNextImage_triggered(self):
@@ -175,6 +176,7 @@ class MainWindow(QMainWindow):
         image_i = image_indexes.index(index)
 
         self.file_tree_viewer.setCurrentIndex(index)
+        self.ui.statusbar.showMessage(f"第 {image_i+1}/{total} 张")
 
     @Slot()
     def pushButton_evalCurrent_clicked(self):
