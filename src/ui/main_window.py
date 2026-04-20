@@ -141,9 +141,15 @@ class MainWindow(QMainWindow):
         indexes = list(self.file_tree_viewer.listIndexes())
         image_indexes = [index for index in indexes if self.is_image(index)]
 
-        total = len(image_indexes)
-        selected_index = indexes.index(self.file_tree_viewer.currentIndex())
+        all_total = len(indexes)
+        image_total = len(image_indexes)
 
+        try:
+            selected_index = indexes.index(self.file_tree_viewer.currentIndex())
+        except ValueError:
+            selected_index = 0
+
+        # 找上一张
         selected_index -= 1
         while selected_index >= 0 and not self.is_image(indexes[selected_index]):
             selected_index -= 1
@@ -155,28 +161,34 @@ class MainWindow(QMainWindow):
         image_i = image_indexes.index(index)
 
         self.file_tree_viewer.setCurrentIndex(index)
-        self.ui.statusbar.showMessage(f"第 {image_i+1}/{total} 张")
+        self.ui.statusbar.showMessage(f"第 {image_i+1}/{image_total} 张")
 
     @Slot()
     def actionNextImage_triggered(self):
         indexes = list(self.file_tree_viewer.listIndexes())
         image_indexes = [index for index in indexes if self.is_image(index)]
 
-        total = len(image_indexes)
-        selected_index = indexes.index(self.file_tree_viewer.currentIndex())
+        all_total = len(indexes)
+        image_total = len(image_indexes)
 
+        try:
+            selected_index = indexes.index(self.file_tree_viewer.currentIndex())
+        except ValueError:
+            selected_index = 0
+
+        # 找下一张
         selected_index += 1
-        while selected_index < total and not self.is_image(indexes[selected_index]):
+        while selected_index < all_total and not self.is_image(indexes[selected_index]):
             selected_index += 1
 
-        if selected_index >= total:
+        if selected_index >= all_total:
             index = image_indexes[-1]
         else:
             index = indexes[selected_index]
         image_i = image_indexes.index(index)
 
         self.file_tree_viewer.setCurrentIndex(index)
-        self.ui.statusbar.showMessage(f"第 {image_i+1}/{total} 张")
+        self.ui.statusbar.showMessage(f"第 {image_i+1}/{image_total} 张")
 
     @Slot()
     def pushButton_evalCurrent_clicked(self):
